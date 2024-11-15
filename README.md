@@ -1,5 +1,7 @@
 # OLLAMA Bounce
-==========================
+
+[![Demo Video](https://img.youtube.com/vi/beaTfXrJ5Jw/0.jpg)](https://www.youtube.com/watch?v=beaTfXrJ5Jw)
+
 
 ## Overview
 Bounce is a command-line utility to simplify the process of command line RAG. It's somewhat immature, and assumes that you're basically the only user of the location /tmp/bounce, so it would probably work well in container environments.
