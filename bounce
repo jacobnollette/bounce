@@ -15,7 +15,10 @@ else
 fi
 
 
-
+if [ -z "$input" ]; then
+  echo "No input provided"
+else
   # Add input to rag
   echo $input >> /tmp/bounce
   cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
+fi
