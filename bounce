@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Check if input comes from pipe or file
+if [ $# -eq 1 ]; then
+    # Input came from pipeline (stdin)
+    input=$1
+else
+    # Input is provided as an argument (file)
+    input="$@"
+fi
+
+# Add input to rag
+echo $input >> /tmp/bounce
+
+cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
