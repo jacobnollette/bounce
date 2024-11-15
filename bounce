@@ -2,7 +2,11 @@
 
 if [ $# -eq 0 ]; then
   # Input came from stdin
-  read -r input
+  #read -r input
+  while IFS= read -r line; do
+    # process each line here
+    input+=$line
+  done < <(timeout 5s cat)
 else
   # Input is provided as an argument (file)
   if [ "$1" = "-" ]; then
