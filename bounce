@@ -2,19 +2,20 @@
 
 if [ $# -eq 0 ]; then
   # Input came from stdin
-  read -r input || echo "No input provided"
+  read -r input
 else
   # Input is provided as an argument (file)
   if [ "$1" = "-" ]; then
     # Input coming directly from a pipeline to the script
-    echo "No input provided"
+    echo "Pipeline flags not supported";
   else
     # Normal file input, just pass it through to the next command's stdin.
     input="$@"
   fi
 fi
 
-# Add input to rag
-echo $input >> /tmp/bounce
 
-cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
+
+  # Add input to rag
+  echo $input >> /tmp/bounce
+  cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
