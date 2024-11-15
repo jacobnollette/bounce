@@ -1,12 +1,17 @@
 #!/bin/bash
 
-# Check if input comes from pipe or file
-if [ $# -eq 1 ]; then
-    # Input came from pipeline (stdin)
-    input=$1
+if [ $# -eq 0 ]; then
+  # Input came from stdin
+  read -r input || echo "No input provided"
 else
-    # Input is provided as an argument (file)
+  # Input is provided as an argument (file)
+  if [ "$1" = "-" ]; then
+    # Input coming directly from a pipeline to the script
+    echo "No input provided"
+  else
+    # Normal file input, just pass it through to the next command's stdin.
     input="$@"
+  fi
 fi
 
 # Add input to rag
