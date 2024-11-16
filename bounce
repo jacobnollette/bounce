@@ -1,28 +1,53 @@
 #!/bin/bash
 
-if [ $# -eq 0 ]; then
-  # Input came from stdin
-  #read -r input
-  while IFS= read -r line; do
-    # process each line here
-    input+=$line
-  done < <(timeout 5s cat)
-else
-  # Input is provided as an argument (file)
-  if [ "$1" = "-" ]; then
-    # Input coming directly from a pipeline to the script
-    echo "Pipeline flags not supported";
-  else
-    # Normal file input, just pass it through to the next command's stdin.
-    input="$@"
-  fi
+# Default Ollama endpoint and model, with overrides via environment variables
+endpoint=${OLLAMA_ENDPOINT:-"127.0.0.1:11434/api/generate"}
+model=${OLLAMA_MODEL:-"llama3.1"}
+threadFile=${OLLAMA_THREAD_FILE:-".thread"}
+
+# Ensure the thread file exists
+if [ ! -f "$threadFile" ]; then
+  touch "$threadFile"
 fi
 
+# Capture input from stdin or arguments
+if [ -t 0 ]; then
+  input="$*"
+else
+  input=$(cat)
+fi
 
+function findContent {
+  local responseOutput=""
+  # 
+  input="$&"
+  echo $input | grep -oP '(?<="response":")[^"]*'
+  while read line; do
+    local response=$(echo $line | grep -oP '(?<="response":")[^"]*')
+    echo -n "$response"
+    responseOutput="$responseOutput$response"
+  done
+  
+}
+function appendToThread {
+  echo "$1" >> "$threadFile"
+}
+function callOllama {
+
+  #{"model":"llama3.1","message":"Hello"
+  #{"model":"llama3.1","message 
+
+  curl -s -o- --no-buffer "$endpoint" --data "{
+    \"model\":\"$model\",
+    \"prompt\": \"$input\",
+    \"stream\":true
+  }" | findContent | cat - >> "$threadFile"
+}
+# Ensure input is provided
 if [ -z "$input" ]; then
   echo "No input provided"
+  exit 1
 else
-  # Add input to rag
-  echo $input >> /tmp/bounce
-  cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
+  # Call Ollama and stream the results to the thread file
+  callOllama
 fi
