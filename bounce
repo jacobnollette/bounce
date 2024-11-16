@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Default Ollama endpoint and model, with overrides via environment variables
+endpoint=${OLLAMA_ENDPOINT:-"127.0.0.1:11434/api/generate"}
+model=${OLLAMA_MODEL:-"llama3.2:latest"}
+threadFile=${OLLAMA_THREAD_FILE:-".thread"}
+
+# Ensure the thread file exists
+if [ ! -f "$threadFile" ]; then
+  touch "$threadFile"
+fi
+
+#  capture new input from user
 if [ $# -eq 0 ]; then
   # Input came from stdin
   #read -r input
@@ -14,15 +25,69 @@ else
     echo "Pipeline flags not supported";
   else
     # Normal file input, just pass it through to the next command's stdin.
-    input="$@"
+    input+="$@"
   fi
 fi
 
 
+# Ensure input is provided, and start query
 if [ -z "$input" ]; then
+
   echo "No input provided"
+  exit 1
+
 else
-  # Add input to rag
-  echo $input >> /tmp/bounce
-  cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
+
+# Add input to rag
+echo "$input" >> $threadFile
+
+prompt=$(cat $threadFile);
+# Sanitize prompt to remove or escape newline characters
+
+
+
+DATA=$(jq -n --arg model "$model" --arg prompt "$prompt" '{model: $model, prompt: $prompt, stream: true}')
+
+# response=$(curl -s -X POST "$endpoint" -H "Content-Type: application/json" -d "$DATA")
+# echo "Server Response: $response"
+
+#   curl -s -X POST "$endpoint" \
+#        -H "Content-Type: application/json" \
+#        -d "$DATA" \
+#   | while read -r line; do
+#     #echo -n "$(echo $line | jq -r '.response // empty' | sed 's/\\n/\n/g')"
+#     echo "$(echo "$line" | jq -r '.response')"
+
+#     # responseOutput="$responseOutput$response"
+#     #echo "$line"
+#   done
+  # Stream the response and extract the "response" field
+  # Stream the response and extract the "response" field
+  # Stream and format the response
+  # Stream and format the response
+  curl -s -X POST "$endpoint" \
+    -H "Content-Type: application/json" \
+    -d "$DATA" | jq -r '.response // empty' | while IFS= read -r response; do
+      if [ -n "$response" ]; then
+        # Skip whitespace-only fragments
+        if [[ "$response" =~ ^[[:space:]]*$ ]]; then
+          continue
+        fi
+
+        # Trim leading/trailing spaces
+        response=$(echo "$response" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+        # Handle proper spacing and concatenation
+        if [[ "$prev" =~ [^[:space:]]$ && ! "$response" =~ ^[[:punct:][:space:]] ]]; then
+          echo -n " " # Add a space only if previous fragment doesn't end with punctuation or space
+        fi
+
+        # Print the response fragment
+        echo -n "$response"
+
+        # Update the previous fragment
+        prev="$response"
+      fi
+    done
+  echo # Ensure a final newline
 fi
