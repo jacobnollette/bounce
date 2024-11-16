@@ -1,10 +1,20 @@
 #!/bin/bash
 
+# Default Ollama endpoint and model, with overrides via environment variables
+endpoint=${BOUNCE_OLLAMA_ENDPOINT:-"127.0.0.1:11434"}
+endpoint="$endpoint/api/generate"
+model=${BOUNCE_OLLAMA_MODEL:-"llama3.2:latest"}
+bounceFile=${BOUNCE_FILE:-"/tmp/bounce"}
+
+# Ensure the thread file exists
+touch "$bounceFile"
+
+
+#  Capture new input from user
 if [ $# -eq 0 ]; then
   # Input came from stdin
-  #read -r input
   while IFS= read -r line; do
-    # process each line here
+    # Process each line here
     input+=$line
   done < <(timeout 5s cat)
 else
@@ -14,15 +24,28 @@ else
     echo "Pipeline flags not supported";
   else
     # Normal file input, just pass it through to the next command's stdin.
-    input="$@"
+    input+="$@"
   fi
 fi
 
 
+# Ensure input is provided, and start query
 if [ -z "$input" ]; then
+
   echo "No input provided"
+  exit 1
+
 else
+
   # Add input to rag
-  echo $input >> /tmp/bounce
-  cat /tmp/bounce | ollama run llama3.2:latest | tee -a /tmp/bounce
+  echo "$input" >> $bounceFile
+
+  prompt=$(cat $bounceFile);
+
+  # Sanitize prompt to remove or escape newline characters
+  DATA=$(jq -n --arg model "$model" --arg prompt "$prompt" '{model: $model, prompt: $prompt, stream: true}')
+
+  # Buffer output, and save to bounce file
+  curl -sN "$endpoint" -d "$DATA" | stdbuf -o0 jq -j '.response // empty' | tee -a $bounceFile
+
 fi

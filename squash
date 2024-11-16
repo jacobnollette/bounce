@@ -1,3 +1,11 @@
 #/bin/bash
-touch /tmp/bounce
-cat /tmp/bounce && : > /tmp/bounce
+bounceFile=${BOUNCE_FILE:-"/tmp/bounce"}
+
+# avoid errors
+touch $bounceFile
+
+# echo bounce file
+cat $bounceFile 
+
+# clear bounce file
+: > $bounceFile
